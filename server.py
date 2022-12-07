@@ -4,19 +4,35 @@ import socket
 hostName = "0.0.0.0"
 serverPort = 8080
 
+def combineFile(path):
+    f = open('200.html', 'r')
+    newF = open('tmp.html', 'w')
+    newF.write(f.read())
+    if ('.html' in path):
+        newF.write(r'Content-Type: text/html; charset=UTF-8\r\n')
+    if ('.txt' in path):
+        newF.write(r'Content-Type: text/plain\r\n')
+    if ('.jpg' in path):
+        newF.write(r'Content-Type: image/jpeg\r\n')
+    if ('.png' in path):
+        newF.write(r'Content-Type: image/png\r\n')
+    if ('.css' in path):
+        newF.write(r'Content-Type: text/css\r\n')
+    newF.write('\n')
+    f = open(path, 'r')
+    newF.write(f.read())
+
 def handleGET(request, client):
     path = request[4::].split()[0][1::]
-    print(path)
     try:
         if (path == ''):
             path = 'index.html'
-        f = open(path)
-        client.sendall('HTTP/1.1 200 OK\r\n'.encode())
+        combineFile(path)
+        f = open('tmp.html')
         client.sendall(f.read().encode())
         client.close()
     except:
         f = open('404.html')
-        client.sendall('HTTP/1.1 404 Not Found\r\n'.encode())
         client.sendall(f.read().encode())
         client.close()
 
@@ -26,7 +42,9 @@ def handlePOST(request, client):
         uname = uname[6::]
         psw = psw[4::]
         if (uname == 'admin' and psw == '123456'):
-            client.sendall('HTTP/1.1 200 OK\r\n'.encode())
+            combineFile('images.html')
+            f = open('tmp.html').read()
+            client.sendall(f.encode())
             client.close()
         else:
             f = open('401.html')
@@ -34,12 +52,12 @@ def handlePOST(request, client):
             client.close()
     except:
         f = open('404.html')
-        client.sendall('HTTP/1.1 404 Not Found\r\n'.encode())
         client.sendall(f.read().encode())
         client.close()
 
 
 def handleRequest(request, client):
+    print(request)
     if (request.startswith('GET')):
         handleGET(request, client)
     if (request.startswith('POST')):
@@ -67,4 +85,4 @@ def socketServer():
 
 if __name__ == "__main__":
     socketServer()
-    
+    # combineFile('index.html', '.html')   
