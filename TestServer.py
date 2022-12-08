@@ -7,7 +7,7 @@ SERVER_PORT = 8080
 BUFFER_SIZE = 1024
 FORMAT = "utf8"
 
-def sendFile(client, path, header = ''):
+def sendFile(client, path, header):
     l = open(path, 'rb').read()
     
     if header != '':
@@ -18,40 +18,62 @@ def sendFile(client, path, header = ''):
     f = header.encode()
     f += l
     
+    # print('Res: ', header.split('\r\n')[0])
     client.sendall(f)
     # client.close()
+
+def _get_content_type(path):
+    re = 'Content-Type: '
+
+    if ('.html' in path or '.htm' in path):
+        re += 'text/html; charset=UTF-8\r\n'
+    elif ('.txt' in path):
+        re += 'text/plain\r\n'
+    elif ('.jpg' in path or '.jpeg' in path):
+        re += 'image/jpeg\r\n'
+    elif ('.png' in path):
+        re += 'image/png\r\n'
+    elif ('.css' in path):
+        re += 'text/css\r\n'
+    else:
+        re += 'application/octet-stream\r\n'
+
+    return re
 
 def sendHeader200(client, path):
     header = 'HTTP/1.1 200 OK\r\nAccept-Ranges: bytes\r\n'
     header += 'Connection: Keep-Alive\r\n'
-    if ('.html' in path):
-        header += 'Content-Type: text/html; charset=UTF-8\r\n'
-    if ('.txt' in path):
-        header += 'Content-Type: text/plain\r\n'
-    if ('.jpg' in path):
-        header += 'Content-Type: image/jpeg\r\n'
-    if ('.png' in path):
-        header += 'Content-Type: image/png\r\n'
-    if ('.css' in path):
-        header += 'Content-Type: text/css\r\n'
-
-    ###
+    header += _get_content_type(path)
     header += 'Keep-Alive: timeout=5, max=1000\r\n'
-    ###
     # header += '\r\n'
-
     # client.sendall(header.encode())
+    return header
+
+def sendHeader404(client, path):
+    header = 'HTTP/1.1 404 Not Found\r\nAccept-Ranges: bytes\r\n'
+    header += 'Connection: Keep-Alive\r\n'
+    header += 'Content-Type: text/html\r\n'
+    header += 'Keep-Alive: timeout=5, max=1000\r\n'
+    # header += '\r\n'
+    return header
+
+def sendHeader401():
+    header = 'HTTP/1.1 401 Unauthorized\r\nAccept-Ranges: bytes\r\n'
+    header += 'Connection: Keep-Alive\r\n'
+    header += 'Content-Type: text/html\r\n'
+    header += 'Keep-Alive: timeout=5, max=1000\r\n'
+    # header += '\r\n'
     return header
 
 def handleGET(request, client):
     path = request[4::].split()[0][1::]
+    print('path: ',path)
     try:
         if (path == ''):
             path = 'index.html'
-        # sendHeader200(client, path)
         sendFile(client, path, sendHeader200(client, path))
     except:
-        sendFile(client, '404.html')
+        sendFile(client, '404.html',sendHeader404(client,path))
 
 def handlePOST(request, client):
     try:
@@ -59,27 +81,45 @@ def handlePOST(request, client):
         uname = uname[6::]
         psw = psw[4::]
         if (uname == 'admin' and psw == '123456'):
-            # sendHeader200(client, 'images.html')
             sendFile(client, 'images.html', sendHeader200(client, 'images.html'))
         else:
-            sendFile(client, '401.html')
+            sendFile(client, '401.html', sendHeader401())
     except:
-        sendFile(client, '404.html')
+        sendFile(client, '404.html',sendHeader401())
+
 
 def handleRequest(request, client):
+    if not request:
+        print('No request')
+    print('Req: ', request.split('\r\n')[0])
     # print(request)
     if (request.startswith('GET')):
         handleGET(request, client)
     if (request.startswith('POST')):
         handlePOST(request, client)
 
-        
+
+def _read_request(client, addr):
+    result = ""
+    client.settimeout(60)# sec
+    try:
+        result = client.recv(BUFFER_SIZE).decode()
+        while (result):
+            result = result + client.recv(BUFFER_SIZE).decode()
+    except socket.timeout:
+        if not result:
+            print("Didn't receive data! [Timeout] from ", {addr})
+    finally:
+        return result
+
+
 def _handle(client, addr):
     while True:
         try:
             print("Connected by", addr)
             request = client.recv(BUFFER_SIZE).decode()# 1024
-            if not request: 
+            # request = _read_request(client, addr)
+            if not request or request == ' ': 
                 print("Client closed: ", addr)
                 client.close()
                 return
@@ -91,7 +131,7 @@ def _handle(client, addr):
 
     # try:
     #     print("Connected by", addr)
-    #     request = client.recv(1024).decode()# 1024
+    #     request = client.recv(BUFFER_SIZE).decode()# 1024
     #     if not request: 
     #         print("Client closed: ", addr)
     #         client.close()
