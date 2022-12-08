@@ -9,16 +9,16 @@ def combineFile(path):
     newF = open('tmp.html', 'w')
     newF.write(f.read())
     if ('.html' in path):
-        newF.write(r'Content-Type: text/html; charset=UTF-8\r\n')
+        newF.write('Content-Type: text/html; charset=UTF-8\r\n')
     if ('.txt' in path):
-        newF.write(r'Content-Type: text/plain\r\n')
+        newF.write('Content-Type: text/plain\r\n')
     if ('.jpg' in path):
-        newF.write(r'Content-Type: image/jpeg\r\n')
+        newF.write('Content-Type: image/jpeg\r\n')
     if ('.png' in path):
-        newF.write(r'Content-Type: image/png\r\n')
+        newF.write('Content-Type: image/png\r\n')
     if ('.css' in path):
-        newF.write(r'Content-Type: text/css\r\n')
-    newF.write('\n')
+        newF.write('Content-Type: text/css\r\n')
+    newF.write('\r\n')
     f = open(path, 'r')
     newF.write(f.read())
 
@@ -27,10 +27,16 @@ def handleGET(request, client):
     try:
         if (path == ''):
             path = 'index.html'
-        combineFile(path)
-        f = open('tmp.html')
-        client.sendall(f.read().encode())
-        client.close()
+        if ('.png' in path or '.jpg' in path):
+            client.sendall("HTTP/1.1 200 OK\r\nAccept-Ranges: bytes\r\nContent-Type: image/png\r\n\r\n".encode())
+            f = open(path, 'rb').read()
+            client.sendall(f)
+            client.close()
+        else:
+            combineFile(curdir + '/' + path)
+            f = open('tmp.html')
+            client.sendall(f.read().encode())
+            client.close()
     except:
         f = open('404.html')
         client.sendall(f.read().encode())
@@ -57,7 +63,7 @@ def handlePOST(request, client):
 
 
 def handleRequest(request, client):
-    print(request)
+    # print(request)
     if (request.startswith('GET')):
         handleGET(request, client)
     if (request.startswith('POST')):
@@ -86,3 +92,4 @@ def socketServer():
 if __name__ == "__main__":
     socketServer()
     # combineFile('index.html', '.html')   
+    
