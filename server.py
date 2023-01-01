@@ -1,7 +1,7 @@
 from os import curdir, sep
 import socket
 
-hostName = "0.0.0.0"
+hostName = 'localhost'
 serverPort = 8080
 
 def sendFile(client, path):
@@ -55,6 +55,7 @@ def handleRequest(request, client):
         handlePOST(request, client)
 
 def socketServer():
+    print("Start Server - %s:%s"%(hostName,serverPort))
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind((hostName, serverPort))
     s.listen()
@@ -64,7 +65,7 @@ def socketServer():
         print("Success!")
         try:
             print("Connected by", addr)
-            request = client.recv(1024).decode()
+            request = client.recv(1024).decode()# 1024
             handleRequest(request, client)
         except KeyboardInterrupt:
             print("Server closed")
