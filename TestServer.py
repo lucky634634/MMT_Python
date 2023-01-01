@@ -5,7 +5,7 @@ import time
 
 HOST_NAME = 'localhost'
 SERVER_PORT = 8080
-BUFFER_SIZE = 1024#4096
+BUFFER_SIZE = 4096#4096
 FORMAT = "utf8"
 
 ADDR_LIST = []
@@ -132,7 +132,6 @@ def _thr_get_req(client, addr):
             except KeyboardInterrupt:
                 break
 
-
 def recvall3(sock, size):
     result = b''
     remaining = size
@@ -214,7 +213,6 @@ def socketServer():
             print("Server closed")
             s.close()
             return
-
 
 if __name__ == "__main__":
     socketServer()
