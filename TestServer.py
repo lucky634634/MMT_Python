@@ -5,11 +5,9 @@ import time
 
 HOST_NAME = "localhost"
 SERVER_PORT = 8080
-BUFFER_SIZE = 4096  # 4096
+BUFFER_SIZE = 4096 # 4096
 FORMAT = "utf8"
 
-ADDR_LIST = []
-queue = []
 # -------------------
 def sendFile(client, path, header, request):
     # Đọc dữ liệu từ file dưới dạng bytes
@@ -27,8 +25,6 @@ def sendFile(client, path, header, request):
     # Gửi toàn bộ response đến client
     try:
         client.sendall(f)
-        if len(queue) > 0:
-            queue.pop(0)
     except socket.timeout:
         pass
 
@@ -124,69 +120,32 @@ def _read_request(Client):
     except socket.timeout:  # fail after 1 second of no activity
         pass
     finally:
+        Client.settimeout(None)
         return re
 
 
-def _modify_addr(addr):
-    addrStr = str(addr)
-    addrStr = addrStr[1::].split(",")[0]
-    return addrStr
-
-
-def _thr_get_req(client, addr):
-    with client:
-        while True:
-            try:
-                # request = _read_request(client)
-                request = client.recv(BUFFER_SIZE).decode()  # 1024
-                queue.append(request)
-            except KeyboardInterrupt:
-                break
-
-
-def recvall3(sock, size):
-    result = b""
-    remaining = size
-    while remaining > 0:
-        data = sock.recv(remaining)
-        result += data
-        remaining -= len(data)
-    return result.decode()
-
-
 def _handle(client, addr):
+    client.settimeout(1)
     with client:
-        # time.sleep(0)
-        # t1 = threading.Thread(target=_thr_get_req,args=(client, addr))
-        # t1.start()
+        # chờ nhận và xử lý request từ client
         while True:
             try:
+                # Server đọc request từ phía client
                 request = ""
-
-                # request = _read_request(client)
-                request = client.recv(BUFFER_SIZE).decode()  # 1024
-                # print(request)
-                # request = recvall3(client, BUFFER_SIZE)# 1024
-
-                # queue.append(request)
-                # if len(request) > 0:
+                request = client.recv(BUFFER_SIZE).decode()#
                 if not request:
                     break
-                # if request not in queue:
-                #     queue.append(request)
-                if len(queue) > 0:
-                    request = queue[0]
                 handleRequest(request, client, addr)
+                client.settimeout(None)
             except socket.timeout:
                 break
             except KeyboardInterrupt:
                 break
 
-        # t1.join()
-        print("Client closed: ", addr)
-        print("------------------------------")
+        # close connection
+        print("Client closed:", addr)
+        print("--------------------")
         client.close()
-        # ADDR_LIST.remove(_modify_addr(addr))
 
 
 def socketServer():
@@ -214,11 +173,6 @@ def socketServer():
     while True:
         try:
             client, addr = s.accept()
-            addrStr = _modify_addr(addr)
-            if addrStr in ADDR_LIST:
-                continue
-            # ADDR_LIST.append(addrStr)
-
             print(addr, "- Xin mo ket noi")
             thr = threading.Thread(target=_handle, args=(client, addr))
             thr.daemon = False  # TRUE
